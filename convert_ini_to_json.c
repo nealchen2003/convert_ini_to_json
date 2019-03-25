@@ -7,7 +7,10 @@ int main(int argc, char *argv[])
  {
 	int n, m=0, i, j;
 	double time;
-	FILE *fin=fopen(argv[1], "r"), *fout=fopen(argv[2], "w");
+	FILE *fin, *fout;
+	assert(argc==1||argc==3);
+	if(argc==1) fin=fopen("config.ini", "r"), fout=fopen("config.json", "w");
+	if(argc==3) fin=fopen(argv[1], "r"), fout=fopen(argv[2], "w");
 	fscanf(fin, "%d ", &n);
 	fprintf(fout, "{\n\t\"cases\":[\n");
 	for(i=1; i<=n; ++i) {
