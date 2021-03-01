@@ -1,0 +1,69 @@
+#!/usr/bin/python3
+import json
+
+fin=open('problem.conf', 'r')
+info=dict()
+while True:
+	line=fin.readline()
+	if len(line.split()) < 2:
+		break
+	key, val=line.split()
+	info[key]=val
+fin.close()
+
+n_tests		= int(info['n_tests'])
+n_ex_tests	= int(info['n_ex_tests'])
+input_mode	= info['input_pre']+'%d.'+info['input_suf']
+output_mode	= info['output_pre']+'%d.'+info['output_suf']
+time_limit	= float(info['time_limit'])
+n_subtasks	= int(info.get('n_subtasks', '0'))
+
+cases=[{'in': input_mode%i, 'out': output_mode%i, 'time': time_limit, 'score': 1} for i in range(1, n_tests+1)]
+
+begins=[]
+ends=[]
+
+if n_subtasks==0:
+	score_map=[{'type': 'average', 'cases': list(range(1, n_tests+1)), 'weight': 100}]
+	ends.append(n_tests)
+else:
+	begin=1
+	score_map=[]
+	for i in range(1, n_subtasks+1):
+		end=int(info['subtask_end_%d'%i])
+		score_map.append({'type': 'min', 'cases': list(range(begin, end+1)), 'weight': int(info['subtask_score_%d'%i])})
+		for j in range(begin, end): cases[j]['depends']=[j]
+		begins.append(begin)
+		ends.append(end)
+		begin=end+1
+		dependence=info.get('subtask_dependence_%d'%i)
+		if dependence=='many':
+			j=1
+			while True:
+				cur=info.get('subtask_dependence_%d_%d'%(i, j))
+				if cur==None: break
+				cur=int(cur)
+				score_map[i-1]['cases']=sorted(set(score_map[i-1]['cases']+score_map[cur-1]['cases']))
+				if cases[begins[i-1]-1].get('depends')==None:
+					cases[begins[i-1]-1]['depends']=[]
+				cases[begins[i-1]-1]['depends'].append(ends[cur-1])
+				j+=1
+		elif dependence!=None:
+			cur=int(dependence)
+			if cases[begins[i-1]-1].get('depends')==None:
+				cases[begins[i-1]-1]['depends']=[]
+			score_map[i-1]['cases']=sorted(set(score_map[i-1]['cases']+score_map[cur-1]['cases']))
+			cases[begins[i-1]-1]['depends'].append(ends[cur-1])
+
+for i in range(1, n_ex_tests+1):
+	cur={'in': 'ex_'+input_mode%i, 'out': 'ex_'+output_mode%i, 'time': time_limit, 'hack': True, 'score': 3};
+	if i!=1:
+		cur['depends']=[len(cases)]
+	else:
+		cur['depends']=ends
+	cases.append(cur)
+score_map.append({'type': 'min', 'cases': list(range(n_tests+1, n_tests+n_ex_tests+1))})
+
+fout=open('config.json', 'w')
+json.dump({'cases': cases, 'score_map': score_map}, fout, indent=4)
+fout.close()
